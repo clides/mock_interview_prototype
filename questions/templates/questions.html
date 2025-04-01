@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Interview Questions</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --text-color: #333;
+            --light-gray: #f5f7fa;
+            --medium-gray: #e1e4e8;
+            --dark-gray: #7f8c8d;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--medium-gray);
+        }
+        
+        .question-section {
+            margin-bottom: 40px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        
+        .question-list {
+            padding: 20px;
+        }
+        
+        .question-category {
+            color: var(--secondary-color);
+            font-weight: 600;
+            margin: 25px 0 10px 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .question-category:before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            margin-right: 10px;
+        }
+        
+        .question-item {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background-color: var(--light-gray);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 0 4px 4px 0;
+            transition: all 0.2s ease;
+        }
+        
+        .question-item:hover {
+            background-color: #e8f4fc;
+            transform: translateX(5px);
+        }
+        
+        .no-questions {
+            text-align: center;
+            padding: 40px;
+            color: var(--dark-gray);
+            font-size: 1.1rem;
+        }
+        
+        .no-questions svg {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 20px;
+            fill: var(--medium-gray);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+            
+            .section-header {
+                padding: 12px 15px;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generated Interview Questions</h1>
+        
+        {% if experience_bquestions or experience_tquestions %}
+        <div class="question-section">
+            <h2 class="section-header">Experience-Based Questions</h2>
+            <div class="question-list">
+                {% if experience_bquestions %}
+                <div class="question-category">Behavioral Questions</div>
+                {% for question in experience_bquestions %}
+                <div class="question-item">{{ question }}</div>
+                {% endfor %}
+                {% endif %}
+                
+                {% if experience_tquestions %}
+                <div class="question-category">Technical Questions</div>
+                {% for question in experience_tquestions %}
+                <div class="question-item">{{ question }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if project_bquestions or project_tquestions %}
+        <div class="question-section">
+            <h2 class="section-header">Project-Based Questions</h2>
+            <div class="question-list">
+                {% if project_bquestions %}
+                <div class="question-category">Behavioral Questions</div>
+                {% for question in project_bquestions %}
+                <div class="question-item">{{ question }}</div>
+                {% endfor %}
+                {% endif %}
+                
+                {% if project_tquestions %}
+                <div class="question-category">Technical Questions</div>
+                {% for question in project_tquestions %}
+                <div class="question-item">{{ question }}</div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if not experience_bquestions and not experience_tquestions and not project_bquestions and not project_tquestions %}
+        <div class="no-questions">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <p>No questions could be generated from your resume.</p>
+            <p>Please ensure your resume contains clear work experience and project descriptions.</p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
