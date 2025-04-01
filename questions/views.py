@@ -13,109 +13,82 @@ def upload_pdf(request):
     if request.method == 'POST' and request.FILES.get('pdf_file'):
         try:
             # Initialize session
-            if 'session_id' not in request.session:
-                request.session['session_id'] = str(uuid.uuid4())
-                logger.debug(f"New session created: {request.session['session_id']}")
+            request.session.setdefault('session_id', str(uuid.uuid4()))
+            logger.debug(f"Session ID: {request.session['session_id']}")
 
-            # Process PDF file
+            # Process PDF
             pdf_file = request.FILES['pdf_file']
-            pdf_reader = PdfReader(pdf_file)
-            text = "\n".join(page.extract_text() for page in pdf_reader.pages)
+            text = "\n".join(page.extract_text() for page in PdfReader(pdf_file).pages)
             request.session['extracted_text'] = text
 
-            # Parse resume and store as JSON
+            # Parse resume and validate format
             resume_parser = ResumeParser(text)
-            experiences = resume_parser.extract_information('e') or []
-            projects = resume_parser.extract_information('p') or []
+            raw_experiences = resume_parser.extract_information('e')
+            raw_projects = resume_parser.extract_information('p')
             
-            request.session['experiences'] = json.dumps(experiences)
-            request.session['projects'] = json.dumps(projects)
+            experiences = json.loads(raw_experiences) if raw_experiences else []
+            projects = json.loads(raw_projects) if raw_projects else []
+
+            # Store validated data
+            request.session['experiences'] = experiences
+            request.session['projects'] = projects
             
-            logger.info("Successfully processed resume")
             return redirect('questions')
 
         except Exception as e:
-            logger.error(f"Error processing PDF: {str(e)}")
+            logger.error(f"Upload error: {str(e)}", exc_info=True)
             return render(request, 'upload.html', {
-                'error': f"Error processing your resume: {str(e)}"
+                'error': f"Failed to process resume. Please try again."
             })
 
     return render(request, 'upload.html')
 
 def questions(request):
     try:
-        # Safely load session data
-        experiences = []
-        projects = []
-        
-        try:
-            experiences = json.loads(request.session.get('experiences', '[]'))
-            projects = json.loads(request.session.get('projects', '[]'))
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid session data: {str(e)}")
-            return render(request, 'questions.html', {
-                'error': "Invalid session data. Please upload your resume again."
-            })
+        experiences = request.session.get('experiences', [])
+        projects = request.session.get('projects', [])
 
         if not experiences and not projects:
-            return render(request, 'questions.html', {
-                'error': "No valid experiences or projects found in your resume."
-            })
+            logger.warning("No valid experiences or projects found")
+            # Redirect to upload page using the URL pattern name
+            return redirect('upload')  # Changed from 'upload_pdf' to match your urls.py
 
-        # Initialize question generator
+        # Generate questions safely
         question_generator = QuestionGenerator()
-        experience_bq = []
-        experience_tq = []
-        project_bq = []
-        project_tq = []
-
-        # Generate questions with timeout protection
-        try:
-            for experience in experiences:
-                if not isinstance(experience, dict):
-                    continue
-                    
-                exp_text = f"(Experience) {experience.get('title', '')}: {experience.get('description', '')}"
-                
-                behavioral_q = question_generator.generate_questions(f"{exp_text} - Behavioral", 'b')
-                if behavioral_q:
-                    experience_bq.append(behavioral_q)
-                
-                technical_q = question_generator.generate_questions(f"{exp_text} - Technical", 't')
-                if technical_q:
-                    experience_tq.append(technical_q)
-
-            for project in projects:
-                if not isinstance(project, dict):
-                    continue
-                    
-                proj_text = f"(Project) {project.get('title', '')}: {project.get('description', '')}"
-                
-                behavioral_q = question_generator.generate_questions(f"{proj_text} - Behavioral", 'b')
-                if behavioral_q:
-                    project_bq.append(behavioral_q)
-                
-                technical_q = question_generator.generate_questions(f"{proj_text} - Technical", 't')
-                if technical_q:
-                    project_tq.append(technical_q)
-
-        except Exception as e:
-            logger.error(f"Error generating questions: {str(e)}")
-            return render(request, 'questions.html', {
-                'error': f"Error generating questions: {str(e)}"
-            })
-
-        context = {
-            'experience_bquestions': experience_bq,
-            'experience_tquestions': experience_tq,
-            'project_bquestions': project_bq,
-            'project_tquestions': project_tq
+        results = {
+            'experience_bquestions': [],
+            'experience_tquestions': [],
+            'project_bquestions': [],
+            'project_tquestions': []
         }
 
-        return render(request, 'questions.html', context)
+        def generate_safe_questions(text, q_type):
+            try:
+                result = question_generator.generate_questions(text, q_type)
+                return str(result) if result else ""
+            except Exception as e:
+                logger.error(f"Question generation failed: {str(e)}")
+                return ""
+
+        # Process experiences
+        for exp in experiences:
+            exp_text = f"(Experience) {exp['title']}: {exp['description']}"
+            if bq := generate_safe_questions(f"{exp_text} - Behavioral", 'b'):
+                results['experience_bquestions'].append(bq)
+            if tq := generate_safe_questions(f"{exp_text} - Technical", 't'):
+                results['experience_tquestions'].append(tq)
+
+        # Process projects
+        for proj in projects:
+            proj_text = f"(Project) {proj['title']}: {proj['description']}"
+            if bq := generate_safe_questions(f"{proj_text} - Behavioral", 'b'):
+                results['project_bquestions'].append(bq)
+            if tq := generate_safe_questions(f"{proj_text} - Technical", 't'):
+                results['project_tquestions'].append(tq)
+
+        return render(request, 'questions.html', results)
 
     except Exception as e:
-        logger.critical(f"Unexpected error in questions view: {str(e)}")
-        return render(request, 'questions.html', {
-            'error': "An unexpected error occurred. Please try again."
-        })
+        logger.critical(f"Questions view error: {str(e)}", exc_info=True)
+        # Fallback to upload page if error template doesn't exist
+        return redirect('upload')
