@@ -25,6 +25,8 @@ def upload_pdf(request):
             resume_parser = ResumeParser(text)
             raw_experiences = resume_parser.extract_information('e')
             raw_projects = resume_parser.extract_information('p')
+            # print("Raw experiences:", raw_experiences)  # Debug the invalid JSON
+            # print("Raw projects:", raw_projects)  # Debug the invalid JSON
             
             experiences = json.loads(raw_experiences) if raw_experiences else []
             projects = json.loads(raw_projects) if raw_projects else []
@@ -62,9 +64,9 @@ def questions(request):
             'project_tquestions': []
         }
 
-        def generate_safe_questions(text, q_type):
+        def generate_safe_questions(text):
             try:
-                result = question_generator.generate_questions(text, q_type)
+                result = question_generator.make_prediction(text)
                 return str(result) if result else ""
             except Exception as e:
                 logger.error(f"Question generation failed: {str(e)}")
@@ -73,17 +75,17 @@ def questions(request):
         # Process experiences
         for exp in experiences:
             exp_text = f"(Experience) {exp['title']}: {exp['description']}"
-            if bq := generate_safe_questions(f"{exp_text} - Behavioral", 'b'):
+            if bq := generate_safe_questions(f"{exp_text} - Behavioral"):
                 results['experience_bquestions'].append(bq)
-            if tq := generate_safe_questions(f"{exp_text} - Technical", 't'):
+            if tq := generate_safe_questions(f"{exp_text} - Technical"):
                 results['experience_tquestions'].append(tq)
 
         # Process projects
         for proj in projects:
             proj_text = f"(Project) {proj['title']}: {proj['description']}"
-            if bq := generate_safe_questions(f"{proj_text} - Behavioral", 'b'):
+            if bq := generate_safe_questions(f"{proj_text} - Behavioral"):
                 results['project_bquestions'].append(bq)
-            if tq := generate_safe_questions(f"{proj_text} - Technical", 't'):
+            if tq := generate_safe_questions(f"{proj_text} - Technical"):
                 results['project_tquestions'].append(tq)
 
         return render(request, 'questions.html', results)
